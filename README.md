@@ -7,3 +7,12 @@ Controlando esteiras com controle de PS5, códigos fontes de uma série de reels
 2- passe o codigo macControleFinder para o esp e rode para pegar o mac do seu controle
 
 3- substitua o mac do seu controle e comece a fazer as adptações que precisa pedindo pro chatgpt ou outra ia partindo do código Esp32Ps5CarrinhoL1l2
+
+
+3 carrinho-wifi com MQTT
+
+1- adicione as libs pub sub e wifi manager
+
+2- apos passar o codigo (carrinhoMqttLwt) e ligar o esp32 vai criar uma rede wifi pra voce conectar nela e informar sua rede wi fi e senha, feito isso clique em salvar, e toque no botao de reset, pronto esp conectado a internet, led azul dele vai acender
+
+3- curte o controle e o carrinho totalmente pela internet
