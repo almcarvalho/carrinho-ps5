@@ -16,3 +16,7 @@ Controlando esteiras com controle de PS5, códigos fontes de uma série de reels
 2- apos passar o codigo (carrinhoMqttLwt) e ligar o esp32 vai criar uma rede wifi pra voce conectar nela e informar sua rede wi fi e senha, feito isso clique em salvar, e toque no botao de reset, pronto esp conectado a internet, led azul dele vai acender
 
 3- curte o controle e o carrinho totalmente pela internet
+
+<img width="825" alt="image" src="https://github.com/user-attachments/assets/1d98b961-d216-4951-8912-62118f4730bf" />
+
+
