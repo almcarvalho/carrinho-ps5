@@ -24,4 +24,12 @@ https://www.instagram.com/reel/DLaR5HLANLo/?igsh=OWNxMDBlZDNwd3ds
 <img width="825" alt="image" src="https://github.com/user-attachments/assets/1d98b961-d216-4951-8912-62118f4730bf" />
 
 
+Repositórios relacionados:
+Backend em node.js 
+https://github.com/almcarvalho/carrinho-mqtt
+Frontend (Controle Pagina Web React)
+https://github.com/almcarvalho/tank-control
+
+
+
 
