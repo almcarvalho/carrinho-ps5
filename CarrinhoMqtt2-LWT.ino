@@ -1,7 +1,7 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <PubSubClient.h>
-#include <WiFiManager.h>  // Adicione a biblioteca via Library Manager
+#include <WiFiManager.h>
 
 #define LED_PIN   2
 #define RELE_L1   4
@@ -14,6 +14,13 @@ const char* mqtt_server = "broker.hivemq.com";
 const char* mqtt_status_topic = "carrinho/status";
 const char* mqtt_command_topic = "carrinho/comando";
 
+bool wifiConectado = false;
+bool portalAtivo = false;
+unsigned long previousMillis = 0;
+const long intervaloPiscar = 100;
+
+WiFiManager wm;
+
 void setup() {
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
@@ -24,36 +31,71 @@ void setup() {
   digitalWrite(RELE_L1, LOW);
   digitalWrite(RELE_L2, LOW);
 
-  WiFiManager wm;
-  bool res = wm.autoConnect("CarrinhoMQTT");
-  if (!res) {
-    Serial.println("Falha na conexão Wi-Fi");
-    wm.resetSettings();
-    ESP.restart();
+  // Primeiro tenta conectar com dados salvos
+  Serial.println("Tentando conectar ao Wi-Fi salvo...");
+  WiFi.begin();
+  unsigned long tempoInicial = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - tempoInicial < 5000) {
+    delay(100);
   }
 
-  // Define servidor e callback MQTT
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Wi-Fi conectado!");
+    wifiConectado = true;
+    digitalWrite(LED_PIN, HIGH);
+  } else {
+    Serial.println("Wi-Fi falhou. Iniciando portal...");
+    wm.setConfigPortalBlocking(false); // NÃO BLOQUEAR
+    wm.startConfigPortal("CarrinhoMQTT");
+    portalAtivo = true;
+  }
+
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+}
+
+void loop() {
+  if (portalAtivo) {
+    wm.process();  // Mantém o portal funcionando
+
+    piscarLedRapido();
+
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Wi-Fi conectado via portal!");
+      portalAtivo = false;
+      wifiConectado = true;
+      digitalWrite(LED_PIN, HIGH);
+    }
+    return;
+  }
+
+  if (wifiConectado) {
+    if (!client.connected()) {
+      digitalWrite(LED_PIN, LOW); // LED apagado se perder MQTT
+      reconnect();
+    }
+    client.loop();
+  }
+}
+
+void piscarLedRapido() {
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= intervaloPiscar) {
+    previousMillis = currentMillis;
+    digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+  }
 }
 
 void reconnect() {
   while (!client.connected()) {
     Serial.print("Conectando ao MQTT...");
 
-    // Define LWT: se desconectar inesperadamente, publica OFFLINE com retain
     String clientId = "ESP32Carrinho";
     if (client.connect(clientId.c_str(), NULL, NULL,
-                      mqtt_status_topic, 0, true, "OFFLINE")) {
+                       mqtt_status_topic, 0, true, "OFFLINE")) {
       Serial.println("Conectado ao MQTT!");
-      
-      // LED ligado = conectado
       digitalWrite(LED_PIN, HIGH);
-
-      // Envia status ONLINE (com retain)
       client.publish(mqtt_status_topic, "ONLINE", true);
-
-      // Se inscreve no tópico de comando
       client.subscribe(mqtt_command_topic);
     } else {
       Serial.print(".");
@@ -90,12 +132,4 @@ void waitAndStop(){
   delay(500);
   digitalWrite(RELE_L1, LOW);
   digitalWrite(RELE_L2, LOW);
-}
-
-void loop() {
-  if (!client.connected()) {
-    digitalWrite(LED_PIN, LOW); // Desliga LED se perder conexão
-    reconnect();
-  }
-  client.loop();
 }
