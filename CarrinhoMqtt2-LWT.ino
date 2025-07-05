@@ -5,7 +5,7 @@
 
 #define LED_PIN   2
 #define RELE_L1   4
-#define RELE_L2   5
+#define RELE_L2   17
 
 WiFiClient espClient;
 PubSubClient client(espClient);
