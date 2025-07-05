@@ -19,6 +19,10 @@ bool portalAtivo = false;
 unsigned long previousMillis = 0;
 const long intervaloPiscar = 100;
 
+// Timer do portal WiFiManager
+unsigned long portalStartTime = 0;
+const unsigned long TEMPO_LIMITE_PORTAL = 60000; // 60 segundos
+
 WiFiManager wm;
 
 void setup() {
@@ -31,7 +35,6 @@ void setup() {
   digitalWrite(RELE_L1, LOW);
   digitalWrite(RELE_L2, LOW);
 
-  // Primeiro tenta conectar com dados salvos
   Serial.println("Tentando conectar ao Wi-Fi salvo...");
   WiFi.begin();
   unsigned long tempoInicial = millis();
@@ -45,9 +48,10 @@ void setup() {
     digitalWrite(LED_PIN, HIGH);
   } else {
     Serial.println("Wi-Fi falhou. Iniciando portal...");
-    wm.setConfigPortalBlocking(false); // NÃO BLOQUEAR
+    wm.setConfigPortalBlocking(false);
     wm.startConfigPortal("CarrinhoMQTT");
     portalAtivo = true;
+    portalStartTime = millis();  // Inicia o temporizador
   }
 
   client.setServer(mqtt_server, 1883);
@@ -56,9 +60,13 @@ void setup() {
 
 void loop() {
   if (portalAtivo) {
-    wm.process();  // Mantém o portal funcionando
-
+    wm.process();
     piscarLedRapido();
+
+    if (millis() - portalStartTime >= TEMPO_LIMITE_PORTAL) {
+      Serial.println("Tempo excedido no modo de conexão. Reiniciando ESP...");
+      ESP.restart();
+    }
 
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println("Wi-Fi conectado via portal!");
@@ -71,7 +79,7 @@ void loop() {
 
   if (wifiConectado) {
     if (!client.connected()) {
-      digitalWrite(LED_PIN, LOW); // LED apagado se perder MQTT
+      digitalWrite(LED_PIN, LOW);
       reconnect();
     }
     client.loop();
@@ -87,6 +95,8 @@ void piscarLedRapido() {
 }
 
 void reconnect() {
+  int tentativasMQTT = 0;
+
   while (!client.connected()) {
     Serial.print("Conectando ao MQTT...");
 
@@ -99,7 +109,13 @@ void reconnect() {
       client.subscribe(mqtt_command_topic);
     } else {
       Serial.print(".");
+      tentativasMQTT++;
       delay(1000);
+
+      if (tentativasMQTT >= 3) {
+        Serial.println("\nFalha ao conectar ao MQTT após 3 tentativas. Reiniciando ESP...");
+        ESP.restart();
+      }
     }
   }
 }
@@ -128,7 +144,7 @@ void callback(char* topic, byte* message, unsigned int length) {
   }
 }
 
-void waitAndStop(){
+void waitAndStop() {
   delay(500);
   digitalWrite(RELE_L1, LOW);
   digitalWrite(RELE_L2, LOW);
